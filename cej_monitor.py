@@ -39,7 +39,7 @@ HEADERS = {
 LISTING_RE = re.compile(r"/boliger/([0-9a-f]{32})")
 
 
-def fetch(url: str, attempts: int = 5) -> str:
+def fetch(url: str, attempts: int = 10) -> str:
     """Hent en side. Ved 429/503 ventes der lidt, og der prøves igen."""
     import time
     import urllib.error
