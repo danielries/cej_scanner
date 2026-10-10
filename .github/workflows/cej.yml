@@ -2,7 +2,7 @@ name: CEJ boligovervågning
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # ca. hvert 10. minut (GitHub kan forsinke lidt)
+    - cron: "*/5 * * * *"   # ca. hvert 5. minut (GitHub kan forsinke lidt)
   workflow_dispatch:          # gør det muligt at køre manuelt
 
 permissions:
