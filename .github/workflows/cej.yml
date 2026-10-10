@@ -23,6 +23,7 @@ jobs:
         run: python3 cej_monitor.py
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+          SCRAPER_API_KEY: ${{ secrets.SCRAPER_API_KEY }}
 
       - name: Gem hvilke boliger der er set
         run: |
