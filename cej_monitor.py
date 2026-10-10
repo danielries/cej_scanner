@@ -39,7 +39,7 @@ HEADERS = {
 LISTING_RE = re.compile(r"/boliger/([0-9a-f]{32})")
 
 
-def fetch(url: str, attempts: int = 10) -> str:
+def fetch(url: str, attempts: int = 5) -> str:
     """Hent en side. Ved 429/503 ventes der lidt, og der prøves igen."""
     import time
     import urllib.error
@@ -50,7 +50,6 @@ def fetch(url: str, attempts: int = 10) -> str:
 
     for attempt in range(1, attempts + 1):
         req = urllib.request.Request(url, headers=HEADERS)
-        # Resten af din eksisterende kode herunder...
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 return resp.read().decode("utf-8", errors="replace")
