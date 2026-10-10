@@ -38,7 +38,7 @@ HEADERS = {
 LISTING_RE = re.compile(r"/boliger/([0-9a-f]{32})")
 
 
-def fetch(url: str, attempts: int = 3) -> str:
+def fetch(url: str, attempts: int = 5) -> str:
     """Hent en side. Ved 429/503 ventes der lidt, og der prøves igen."""
     import time
     import urllib.error
@@ -52,8 +52,8 @@ def fetch(url: str, attempts: int = 3) -> str:
             if exc.code not in (429, 503) or attempt == attempts:
                 raise
             retry_after = exc.headers.get("Retry-After", "")
-            wait = int(retry_after) if retry_after.isdigit() else 20 * attempt
-            wait = min(wait, 60)
+            wait = int(retry_after) if retry_after.isdigit() else 15 * attempt
+            wait = min(wait, 45)
             print(f"HTTP {exc.code} – venter {wait} sek. og prøver igen ({attempt}/{attempts})")
             time.sleep(wait)
     raise RuntimeError("unreachable")
@@ -128,8 +128,8 @@ def main() -> int:
         errors = state.get("errors", 0) + 1
         state["errors"] = errors
         print(f"Kunne ikke hente siden ({errors} fejl i træk): {exc}")
-        if errors == 6:  # ca. 1 time med fejl
-            notify("CEJ-overvågning: fejl", f"Kunne ikke hente CEJ i ca. en time: {exc}",
+        if errors == 18:  # ca. 3 timer uden en eneste vellykket kørsel
+            notify("CEJ-overvågning: fejl", f"Har ikke kunnet hente CEJ i ca. 3 timer: {exc}",
                    click=URL, tags="warning")
         save_state(state)
         return 0
