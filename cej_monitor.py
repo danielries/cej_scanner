@@ -24,7 +24,7 @@ URL = os.environ.get("CEJ_URL", DEFAULT_URL)
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
 STATE_FILE = os.environ.get("STATE_FILE", "seen.json")
 BASE = "https://udlejning.cej.dk"
-SCRAPER_API_KEY = os.environ.get("SCRAPER_API_KEY", "")
+SCRAPINGANT_API_KEY = os.environ.get("SCRAPINGANT_API_KEY", "")
 
 HEADERS = {
     "User-Agent": (
@@ -40,13 +40,12 @@ LISTING_RE = re.compile(r"/boliger/([0-9a-f]{32})")
 
 
 def fetch(url: str, attempts: int = 5) -> str:
-    """Hent en side. Ved 429/503 ventes der lidt, og der prøves igen."""
     import time
     import urllib.error
 
-    if SCRAPER_API_KEY:
+    if SCRAPINGANT_API_KEY:
         encoded_url = urllib.parse.quote(url)
-        url = f"http://api.scraperapi.com?api_key={SCRAPER_API_KEY}&url={encoded_url}"
+        url = f"https://api.scrapingant.com/v2/general?url={encoded_url}&x-api-key={SCRAPINGANT_API_KEY}"
 
     for attempt in range(1, attempts + 1):
         req = urllib.request.Request(url, headers=HEADERS)
