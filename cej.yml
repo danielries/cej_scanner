@@ -1,0 +1,32 @@
+name: CEJ boligovervågning
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # ca. hvert 10. minut (GitHub kan forsinke lidt)
+  workflow_dispatch:          # gør det muligt at køre manuelt
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cej-monitor
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tjek CEJ for nye boliger
+        run: python3 cej_monitor.py
+        env:
+          NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+
+      - name: Gem hvilke boliger der er set
+        run: |
+          git config user.name "cej-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add seen.json
+          git diff --cached --quiet || (git commit -m "Opdater sete boliger" && git push)
