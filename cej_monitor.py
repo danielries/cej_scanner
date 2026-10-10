@@ -50,7 +50,7 @@ def fetch(url: str, attempts: int = 5) -> str:
     for attempt in range(1, attempts + 1):
         req = urllib.request.Request(url, headers=HEADERS)
         try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
+            with urllib.request.urlopen(req, timeout=90) as resp:
                 return resp.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
             if exc.code not in (429, 503) or attempt == attempts:
@@ -76,7 +76,7 @@ def notify(title: str, message: str, click: str | None = None, tags: str = "hous
         data=message.encode("utf-8"),
         method="POST",
     )
-    urllib.request.urlopen(req, timeout=30).read()
+    urllib.request.urlopen(req, timeout=90).read()
 
 
 def load_state() -> dict:
