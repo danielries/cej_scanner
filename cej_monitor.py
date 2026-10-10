@@ -30,16 +30,33 @@ HEADERS = {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
         "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
     ),
-    "Accept-Language": "da-DK,da;q=0.9",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "da-DK,da;q=0.9,en;q=0.8",
+    "Referer": "https://udlejning.cej.dk/",
 }
 
 LISTING_RE = re.compile(r"/boliger/([0-9a-f]{32})")
 
 
-def fetch(url: str) -> str:
-    req = urllib.request.Request(url, headers=HEADERS)
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return resp.read().decode("utf-8", errors="replace")
+def fetch(url: str, attempts: int = 3) -> str:
+    """Hent en side. Ved 429/503 ventes der lidt, og der prøves igen."""
+    import time
+    import urllib.error
+
+    for attempt in range(1, attempts + 1):
+        req = urllib.request.Request(url, headers=HEADERS)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 503) or attempt == attempts:
+                raise
+            retry_after = exc.headers.get("Retry-After", "")
+            wait = int(retry_after) if retry_after.isdigit() else 20 * attempt
+            wait = min(wait, 60)
+            print(f"HTTP {exc.code} – venter {wait} sek. og prøver igen ({attempt}/{attempts})")
+            time.sleep(wait)
+    raise RuntimeError("unreachable")
 
 
 def notify(title: str, message: str, click: str | None = None, tags: str = "house") -> None:
