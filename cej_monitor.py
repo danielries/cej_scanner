@@ -70,20 +70,28 @@ HEADERS = {
     "Accept-Language": "da-DK,da;q=0.9,en;q=0.8",
 }
 
-def fetch(url: str, attempts: int = 5) -> str:
+def fetch(url: str, attempts: int = 5, force_scrapingant: bool = False) -> str:
     import time
     import urllib.error
 
-    if SCRAPINGANT_API_KEY:
+    # Tjek om vi skal bruge ScrapingAnt (enten fordi vi beder om det, eller som fallback)
+    target_url = url
+    if force_scrapingant and SCRAPINGANT_API_KEY:
         encoded_url = urllib.parse.quote(url)
-        url = f"https://api.scrapingant.com/v2/general?url={encoded_url}&x-api-key={SCRAPINGANT_API_KEY}"
+        target_url = f"https://api.scrapingant.com/v2/general?url={encoded_url}&x-api-key={SCRAPINGANT_API_KEY}"
 
     for attempt in range(1, attempts + 1):
-        req = urllib.request.Request(url, headers=HEADERS)
+        req = urllib.request.Request(target_url, headers=HEADERS)
         try:
             with urllib.request.urlopen(req, timeout=90) as resp:
                 return resp.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
+            # Hvis vi bliver blokeret af et anti-bot system (403, 406) eller rammer en rate limit (429) på et gratis kald
+            if not force_scrapingant and SCRAPINGANT_API_KEY and exc.code in (401, 403, 406, 429, 503):
+                print(f"HTTP {exc.code} på {url} – skifter til ScrapingAnt (fallback)...")
+                return fetch(url, attempts=3, force_scrapingant=True)
+            
+            # Hvis ScrapingAnt også fejler pga. travlhed, eller vi slet ikke har en API-nøgle, så prøver vi igen lidt efter
             if exc.code not in (429, 503) or attempt == attempts:
                 raise
             retry_after = exc.headers.get("Retry-After", "")
@@ -91,6 +99,7 @@ def fetch(url: str, attempts: int = 5) -> str:
             wait = min(wait, 45)
             print(f"HTTP {exc.code} – venter {wait} sek. og prøver igen ({attempt}/{attempts})")
             time.sleep(wait)
+            
     raise RuntimeError("unreachable")
 
 def notify(title: str, message: str, click: str | None = None, tags: str = "house") -> None:
