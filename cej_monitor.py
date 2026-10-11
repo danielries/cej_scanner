@@ -78,7 +78,7 @@ def fetch(url: str, attempts: int = 5, force_scrapingant: bool = False) -> str:
     target_url = url
     if force_scrapingant and SCRAPINGANT_API_KEY:
         encoded_url = urllib.parse.quote(url)
-        target_url = f"https://api.scrapingant.com/v2/general?url={encoded_url}&x-api-key={SCRAPINGANT_API_KEY}"
+        target_url = f"https://api.scrapingant.com/v2/general?url={encoded_url}&x-api-key={SCRAPINGANT_API_KEY}&browser=false"
 
     for attempt in range(1, attempts + 1):
         req = urllib.request.Request(target_url, headers=HEADERS)
@@ -141,37 +141,34 @@ def check_cej(state: dict, first_run: bool):
         pass
 
 def check_kereby(state: dict, first_run: bool):
+    print("--- Tjekker Kereby ---")
     seen = set(state.get("seen_kereby", []))
+    is_kereby_first_run = len(seen) == 0
+    
     try:
         html = fetch(KEREBY_URL)
         links = set(re.findall(r'href="(/bolig/[^"]+)"', html))
         current_links = [KEREBY_BASE + l if not l.startswith("http") else l for l in links]
         new_links = [lnk for lnk in current_links if lnk not in seen]
 
-        if not first_run:
+        if not first_run and not is_kereby_first_run:
             for link in new_links:
-                try:
-                    b_html = fetch(link)
-                    pris_m = re.search(r'([0-9]{1,2}\.[0-9]{3})\s*kr', b_html, re.I)
-                    pris = int(pris_m.group(1).replace('.', '')) if pris_m else 999999
-                    vaer_m = re.search(r'([1-9])\s*værels', b_html, re.I)
-                    vaer = int(vaer_m.group(1)) if vaer_m else 0
-                    m2_m = re.search(r'([0-9]{2,3})\s*m', b_html, re.I)
-                    m2 = int(m2_m.group(1)) if m2_m else 0
-                    
-                    omraade_ok = any(by in link.lower() or by in b_html.lower() for by in ['københavn', 'frederiksberg'])
-                    er_reserveret = "reserveret" in b_html.lower()
-
-                    if pris <= 15000 and vaer >= 2 and m2 >= 25 and omraade_ok and not er_reserveret:
-                        notify("Ny bolig hos Kereby 🏠", f"{pris} kr. · {vaer} vær. · {m2} m²", click=link)
-                except:
-                    pass
+                # Træk postnummeret direkte ud af URL'en (f.eks. "-2200-kobenhavn")
+                postnr_match = re.search(r'-([1-2][0-9]{3})-(kobenhavn|frederiksberg)', link, re.I)
+                if postnr_match:
+                    p = int(postnr_match.group(1))
+                    if (1000 <= p <= 2000) or p == 2100 or p == 2200:
+                        notify("Ny bolig hos Kereby 🏠", "Tryk for at åbne", click=link)
+                        
         state["seen_kereby"] = sorted(seen | set(current_links))
-    except:
-        pass
+    except Exception as exc:
+        print(f"Kunne ikke hente Kereby: {exc}")
 
 def check_heimstaden(state: dict, first_run: bool):
+    print("--- Tjekker Heimstaden ---")
     seen = set(state.get("seen_heimstaden", []))
+    is_heimstaden_first_run = len(seen) == 0
+    
     try:
         html = fetch(HEIMSTADEN_URL)
         links = set(re.findall(r'href="(/bolig/[^"]+)"', html))
@@ -179,22 +176,13 @@ def check_heimstaden(state: dict, first_run: bool):
         current_links = [HEIMSTADEN_BASE + l if not l.startswith("http") else l for l in links]
         new_links = [lnk for lnk in current_links if lnk not in seen]
 
-        if not first_run:
+        if not first_run and not is_heimstaden_first_run:
             for link in new_links:
-                try:
-                    b_html = fetch(link)
-                    pris_m = re.search(r'([0-9]{1,2}\.[0-9]{3})\s*kr', b_html, re.I)
-                    pris = pris_m.group(1) if pris_m else "?"
-                    vaer_m = re.search(r'([1-9])\s*værels', b_html, re.I)
-                    vaer = vaer_m.group(1) if vaer_m else "?"
-                    m2_m = re.search(r'([0-9]{2,3})\s*m', b_html, re.I)
-                    m2 = m2_m.group(1) if m2_m else "?"
-                    notify("Ny bolig hos Heimstaden 🏠", f"{pris} kr. · {vaer} vær. · {m2} m²", click=link)
-                except:
-                    notify("Ny bolig hos Heimstaden 🏠", "Ny bolig fundet – tryk for at se mere", click=link)
+                notify("Ny bolig hos Heimstaden 🏠", "Tryk for at åbne", click=link)
+                
         state["seen_heimstaden"] = sorted(seen | set(current_links))
-    except:
-        pass
+    except Exception as exc:
+        print(f"Kunne ikke hente Heimstaden: {exc}")
 
 def check_propstep(state: dict, first_run: bool):
     print("--- Tjekker Propstep ---")
