@@ -46,6 +46,16 @@ PROPSTEP_BASE = "https://propstep.com"
 # --- Indstillinger for City Apartment ---
 CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/?_sfm_pris=0+15000&_sfm_ikon_m2=0+300"
 
+# --- Indstillinger for Findbolig ---
+FINDBOLIG_URL = (
+    "https://www.findbolig.nu/da-dk/find?Rent=0%2C15000&Rooms=2%2C10"
+    "&Area=0%2C500&Floor=0%2C20&PropertyYear=1900%2C2026"
+    "&PropertyType=0b119adc-83b4-4d51-981c-4b3c26d58d50"
+    "&City=K%C3%B8benhavn+%C3%98%2CK%C3%B8benhavn+V%2CK%C3%B8benhavn+N%2CK%C3%B8benhavn+K"
+    "&Commune=Frederiksberg"
+)
+FINDBOLIG_BASE = "https://www.findbolig.nu"
+
 # --- System ---
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
 STATE_FILE = os.environ.get("STATE_FILE", "seen.json")
@@ -264,6 +274,32 @@ def check_cityapartment(state: dict, first_run: bool):
     except Exception as exc:
         print(f"Kunne ikke hente City Apartment: {exc}")
 
+def check_findbolig(state: dict, first_run: bool):
+    print("--- Tjekker Findbolig ---")
+    seen = set(state.get("seen_findbolig", []))
+    is_findbolig_first_run = len(seen) == 0
+    
+    try:
+        html = fetch(FINDBOLIG_URL)
+        
+        # Findbolig genererer typisk deres links dynamisk
+        links = set(re.findall(r'href="(/da-dk/bolig/[^"]+)"', html))
+        current_links = [FINDBOLIG_BASE + l if not l.startswith("http") else l for l in links]
+        new_links = [lnk for lnk in current_links if lnk not in seen]
+
+        if not first_run and not is_findbolig_first_run:
+            for link in new_links:
+                notify(
+                    "Ny bolig hos Findbolig 🏠", 
+                    "Først-til-mølle bolig fundet! Tryk hurtigt her for at se den.", 
+                    click=link
+                )
+                
+        state["seen_findbolig"] = sorted(seen | set(current_links))
+    except Exception as exc:
+        print(f"Kunne ikke hente Findbolig: {exc}")
+
+
 def main() -> int:
     state = load_state()
     today = datetime.date.today().isoformat()
@@ -277,6 +313,7 @@ def main() -> int:
     check_heimstaden(state, first_run)
     check_propstep(state, first_run)
     check_cityapartment(state, first_run)
+    check_findbolig(state, first_run)
 
     state["last_check_day"] = today
     save_state(state)
