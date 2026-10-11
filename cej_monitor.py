@@ -175,39 +175,48 @@ def check_heimstaden(state: dict, first_run: bool):
         pass
 
 def check_propstep(state: dict, first_run: bool):
+    print("--- Tjekker Propstep ---")
     seen = set(state.get("seen_propstep", []))
+    is_propstep_first_run = len(seen) == 0  # Forhindrer spam, når Propstep tilføjes første gang
+    
     try:
         html = fetch(PROPSTEP_URL)
-        # Find links til Propstep boliger
         links = set(re.findall(r'href="(/da-DK/bolig/[^"]+)"', html))
         current_links = [PROPSTEP_BASE + l if not l.startswith("http") else l for l in links]
         new_links = [lnk for lnk in current_links if lnk not in seen]
 
-        if not first_run:
+        if not first_run and not is_propstep_first_run:
             for link in new_links:
                 try:
                     b_html = fetch(link)
+                    html_lower = b_html.lower()
                     
-                    # Tjek postnummer (tillad kun K, V, Frb, Ø, N)
-                    postnr_match = re.search(r'\b(1[0-9]{3}|2000|2100|2200)\b', b_html)
-                    godkendt_omraade = False
+                    # 1. Frasortér reserverede og udlejede boliger
+                    if "reserveret" in html_lower or "udlejet" in html_lower:
+                        continue
+                        
+                    # 2. Hård blokering af uønskede postnumre/bydele (Amager, Nordvest, Sydhavn osv.)
+                    bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
+                    if any(re.search(rf"\b{bz}\b", b_html) for bz in bad_zips):
+                        continue
+                        
+                    # 3. Find pris, værelser og m2
+                    pris_m = re.search(r'([0-9]{1,2}[.,][0-9]{3})', b_html)
+                    pris = pris_m.group(1).replace(',', '.') if pris_m else "?"
                     
-                    if postnr_match:
-                        p = int(postnr_match.group(1))
-                        # K (1000-1499), V (1500-1799), Frb (1800-2000), Ø (2100), N (2200)
-                        if (1000 <= p <= 2000) or p == 2100 or p == 2200:
-                            godkendt_omraade = True
-                            
-                    if godkendt_omraade:
-                        pris_m = re.search(r'([0-9]{1,2}\.[0-9]{3})\s*kr', b_html, re.I)
-                        pris = pris_m.group(1) if pris_m else "?"
-                        notify("Ny bolig hos Propstep 🏠", f"{pris} kr. - Ligger i dit valgte område!", click=link)
-                except:
-                    pass
+                    vaer_m = re.search(r'([1-9])\s*vær', b_html, re.I)
+                    vaer = vaer_m.group(1) if vaer_m else "?"
+                    
+                    m2_m = re.search(r'([0-9]{2,3})\s*m', b_html, re.I)
+                    m2 = m2_m.group(1) if m2_m else "?"
+
+                    notify("Ny bolig hos Propstep 🏠", f"{pris} kr. · {vaer} vær. · {m2} m²", click=link)
+                except Exception as e:
+                    print(f"Fejl ved Propstep bolig {link}: {e}")
                     
         state["seen_propstep"] = sorted(seen | set(current_links))
-    except:
-        pass
+    except Exception as exc:
+        print(f"Kunne ikke hente Propstep: {exc}")
 
 def main() -> int:
     state = load_state()
