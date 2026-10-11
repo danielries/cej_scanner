@@ -43,6 +43,9 @@ PROPSTEP_URL = (
 )
 PROPSTEP_BASE = "https://propstep.com"
 
+# --- Indstillinger for City Apartment ---
+CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/?_sfm_pris=0+15000&_sfm_ikon_m2=0+300"
+
 # --- System ---
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "").strip()
 STATE_FILE = os.environ.get("STATE_FILE", "seen.json")
@@ -218,6 +221,49 @@ def check_propstep(state: dict, first_run: bool):
     except Exception as exc:
         print(f"Kunne ikke hente Propstep: {exc}")
 
+def check_cityapartment(state: dict, first_run: bool):
+    print("--- Tjekker City Apartment ---")
+    seen = set(state.get("seen_cityapt", []))
+    is_cityapt_first_run = len(seen) == 0
+    
+    try:
+        html = fetch(CITYAPARTMENT_URL)
+        # City Apartment bruger typisk /da/property/ eller lignende links i deres oversigter
+        links = set(re.findall(r'href="(https://cityapartment\.dk/da/[^"]+)"', html))
+        # Filtrer links så vi kun kigger på faktiske bolig-sider og undgår menulinks
+        links = {l for l in links if "property" in l or "lejeboliger-koebenhavn/" in l and l != CITYAPARTMENT_URL}
+        
+        new_links = [lnk for lnk in links if lnk not in seen]
+
+        if not first_run and not is_cityapt_first_run:
+            for link in new_links:
+                try:
+                    b_html = fetch(link)
+                    
+                    # 1. Tjek postnummer (tillad kun K, V, Frb, Ø, N)
+                    postnr_match = re.search(r'\b(1[0-9]{3}|2000|2100|2200)\b', b_html)
+                    if not postnr_match:
+                        continue
+                        
+                    # 2. Find pris og værelser
+                    pris_m = re.search(r'([0-9]{1,2}[.,][0-9]{3})\s*DKK', b_html, re.I)
+                    pris_val = int(pris_m.group(1).replace('.', '').replace(',', '')) if pris_m else 999999
+                    pris_str = pris_m.group(1) if pris_m else "?"
+                    
+                    vaer_m = re.search(r'([1-9])\s*-?\s*vær', b_html, re.I)
+                    vaer_val = int(vaer_m.group(1)) if vaer_m else 0
+                    vaer_str = vaer_m.group(1) if vaer_m else "?"
+
+                    # 3. Filtrer benhårdt på dine krav
+                    if pris_val <= 15000 and vaer_val >= 2:
+                        notify("Ny bolig hos City Apartment 🏠", f"{pris_str} kr. · {vaer_str} vær.", click=link)
+                except Exception as e:
+                    print(f"Fejl ved City Apt bolig {link}: {e}")
+                    
+        state["seen_cityapt"] = sorted(seen | links)
+    except Exception as exc:
+        print(f"Kunne ikke hente City Apartment: {exc}")
+
 def main() -> int:
     state = load_state()
     today = datetime.date.today().isoformat()
@@ -230,6 +276,7 @@ def main() -> int:
     check_kereby(state, first_run)
     check_heimstaden(state, first_run)
     check_propstep(state, first_run)
+    check_cityapartment(state, first_run)
 
     state["last_check_day"] = today
     save_state(state)
