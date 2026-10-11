@@ -73,6 +73,12 @@ HEADERS = {
 def fetch(url: str, attempts: int = 5, force_scrapingant: bool = False) -> str:
     import time
     import urllib.error
+    import ssl
+
+    # Opsæt SSL-kontekst til at ignorere certifikat-tjek
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
 
     # Tjek om vi skal bruge ScrapingAnt (enten fordi vi beder om det, eller som fallback)
     target_url = url
@@ -83,7 +89,8 @@ def fetch(url: str, attempts: int = 5, force_scrapingant: bool = False) -> str:
     for attempt in range(1, attempts + 1):
         req = urllib.request.Request(target_url, headers=HEADERS)
         try:
-            with urllib.request.urlopen(req, timeout=90) as resp:
+            # Vi tilføjer context=ctx her for at ignorere SSL-fejlen
+            with urllib.request.urlopen(req, timeout=90, context=ctx) as resp:
                 return resp.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
             # Hvis vi bliver blokeret af et anti-bot system (403, 406) eller rammer en rate limit (429) på et gratis kald
@@ -91,7 +98,6 @@ def fetch(url: str, attempts: int = 5, force_scrapingant: bool = False) -> str:
                 print(f"HTTP {exc.code} på {url} – skifter til ScrapingAnt (fallback)...")
                 return fetch(url, attempts=3, force_scrapingant=True)
             
-            # Hvis ScrapingAnt også fejler pga. travlhed, eller vi slet ikke har en API-nøgle, så prøver vi igen lidt efter
             if exc.code not in (429, 503) or attempt == attempts:
                 raise
             retry_after = exc.headers.get("Retry-After", "")
