@@ -136,16 +136,17 @@ def check_cej(state: dict, first_run: bool):
     print("--- Tjekker CEJ ---")
     seen = set(state.get("seen", []))
     try:
-        # Nu bruger vi Playwright (fetch_js) i stedet for urllib for at undgå HTTP 429
         html = fetch_js(CEJ_URL)
         current = sorted(set(re.findall(r"/boliger/([0-9a-f]{32})", html)))
+        print(f"✅ CEJ fandt {len(current)} boliger på overblikket.")
+        
         new = [i for i in current if i not in seen]
         
         if not first_run:
             for listing_id in new:
                 link = f"{CEJ_BASE}/boliger/{listing_id}"
                 try:
-                    b_html = fetch_js(link).lower() # Vi bruger også Playwright her
+                    b_html = fetch_js(link).lower()
                     
                     if "reserveret" in b_html or "udlejet" in b_html or "lukket" in b_html:
                         continue
