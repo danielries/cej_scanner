@@ -48,11 +48,12 @@ CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/?_sfm_pr
 
 # --- Indstillinger for Findbolig ---
 FINDBOLIG_URL = (
-    "https://www.findbolig.nu/da-dk/find?Rent=0%2C15000&Rooms=2%2C10"
-    "&Area=0%2C500&Floor=0%2C20&PropertyYear=1900%2C2026"
-    "&PropertyType=0b119adc-83b4-4d51-981c-4b3c26d58d50"
-    "&City=K%C3%B8benhavn+%C3%98%2CK%C3%B8benhavn+V%2CK%C3%B8benhavn+N%2CK%C3%B8benhavn+K"
-    "&Commune=Frederiksberg"
+    # "https://www.findbolig.nu/da-dk/find?Rent=0%2C15000&Rooms=2%2C10"
+    # "&Area=0%2C500&Floor=0%2C20&PropertyYear=1900%2C2026"
+    # "&PropertyType=0b119adc-83b4-4d51-981c-4b3c26d58d50"
+    # "&City=K%C3%B8benhavn+%C3%98%2CK%C3%B8benhavn+V%2CK%C3%B8benhavn+N%2CK%C3%B8benhavn+K"
+    # "&Commune=Frederiksberg"
+    "https://www.findbolig.nu/da-dk/find?Rent=0%2C45000&Rooms=0%2C10&Area=0%2C500&Floor=0%2C20&PropertyYear=1900%2C2026&PropertyType=0b119adc-83b4-4d51-981c-4b3c26d58d50+%2C0b119adc-83b4-4d51-981c-4b3c26d58d50&City=K%C3%B8benhavn+%C3%98%2CK%C3%B8benhavn+V%2CK%C3%B8benhavn+N%2CK%C3%B8benhavn+K+&Commune=Frederiksberg"
 )
 FINDBOLIG_BASE = "https://www.findbolig.nu"
 
