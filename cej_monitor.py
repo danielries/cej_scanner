@@ -10,6 +10,7 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+from playwright.sync_api import sync_playwright
 
 # --- Indstillinger for CEJ ---
 DEFAULT_CEJ_URL = (
@@ -112,6 +113,17 @@ def fetch(url: str, attempts: int = 5, force_scrapingant: bool = False) -> str:
             
     raise RuntimeError("unreachable")
 
+def fetch_js(url: str) -> str:
+    print(f"Starter usynlig browser for: {url[:50]}...")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page(user_agent=HEADERS["User-Agent"])
+        # Venter indtil al netværkstrafik (JavaScript) er færdig
+        page.goto(url, wait_until="networkidle", timeout=60000)
+        html = page.content()
+        browser.close()
+        return html
+
 def notify(title: str, message: str, click: str | None = None, tags: str = "house") -> None:
     if not NTFY_TOPIC:
         return
@@ -145,7 +157,22 @@ def check_cej(state: dict, first_run: bool):
         new = [i for i in current if i not in seen]
         if not first_run:
             for listing_id in new:
-                notify("Ny bolig hos CEJ 🏠", "Ny bolig fundet – tryk for at se mere", click=f"{CEJ_BASE}/boliger/{listing_id}")
+                link = f"{CEJ_BASE}/boliger/{listing_id}"
+                try:
+                    b_html = fetch(link).lower()
+                    
+                    # 1. Frasortér reserverede og lukkede boliger
+                    if "reserveret" in b_html or "udlejet" in b_html or "lukket" in b_html:
+                        continue
+                        
+                    # 2. Hård blokering af Amager og uønskede postnumre
+                    bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
+                    if any(bz in b_html for bz in bad_zips):
+                        continue
+                        
+                    notify("Ny bolig hos CEJ 🏠", "Ny bolig fundet – tryk for at se mere", click=link)
+                except Exception:
+                    pass
         state["seen"] = sorted(seen | set(current))
     except:
         pass
@@ -156,7 +183,7 @@ def check_kereby(state: dict, first_run: bool):
     is_kereby_first_run = len(seen) == 0
     
     try:
-        html = fetch(KEREBY_URL)
+        html = fetch_js(KEREBY_URL)
         links = set(re.findall(r'href="(/bolig/[^"]+)"', html))
         current_links = [KEREBY_BASE + l if not l.startswith("http") else l for l in links]
         new_links = [lnk for lnk in current_links if lnk not in seen]
@@ -196,7 +223,7 @@ def check_heimstaden(state: dict, first_run: bool):
     is_heimstaden_first_run = len(seen) == 0
     
     try:
-        html = fetch(HEIMSTADEN_URL)
+        html = fetch_js(HEIMSTADEN_URL)
         links = set(re.findall(r'href="(/bolig/[^"]+)"', html))
         links.update(re.findall(r'href="(/lejebolig/[^"]+)"', html))
         current_links = [HEIMSTADEN_BASE + l if not l.startswith("http") else l for l in links]
@@ -216,7 +243,7 @@ def check_propstep(state: dict, first_run: bool):
     is_propstep_first_run = len(seen) == 0  # Forhindrer spam, når Propstep tilføjes første gang
     
     try:
-        html = fetch(PROPSTEP_URL)
+        html = fetch_js(PROPSTEP_URL)
         links = set(re.findall(r'href="(/da-DK/bolig/[^"]+)"', html))
         current_links = [PROPSTEP_BASE + l if not l.startswith("http") else l for l in links]
         new_links = [lnk for lnk in current_links if lnk not in seen]
@@ -260,7 +287,7 @@ def check_cityapartment(state: dict, first_run: bool):
     is_cityapt_first_run = len(seen) == 0
     
     try:
-        html = fetch(CITYAPARTMENT_URL)
+        html = fetch_js(CITYAPARTMENT_URL)
         # City Apartment bruger typisk /da/property/ eller lignende links i deres oversigter
         links = set(re.findall(r'href="(https://cityapartment\.dk/da/[^"]+)"', html))
         # Filtrer links så vi kun kigger på faktiske bolig-sider og undgår menulinks
@@ -303,7 +330,7 @@ def check_findbolig(state: dict, first_run: bool):
     is_findbolig_first_run = len(seen) == 0
     
     try:
-        html = fetch(FINDBOLIG_URL)
+        html = fetch_js(FINDBOLIG_URL)
         
         # Findbolig genererer typisk deres links dynamisk
         links = set(re.findall(r'href="(/da-dk/bolig/[^"]+)"', html))
