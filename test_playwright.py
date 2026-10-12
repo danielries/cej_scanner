@@ -1,36 +1,62 @@
-import re
+import json
 from playwright.sync_api import sync_playwright
 
-# Vi bruger Heimstaden som test, da den fejlede totalt i din sidste test
-TEST_URL = "https://www.heimstaden.dk/ledige-lejeboliger/?property=9-311%2C9-298%2C9-227%2C9-238%2C9-691%2C9-288%2C9-715%2C9-716%2C9-356%2C9-335%2C9-229%2C9-201%2C9-210%2C9-689%2C9-110%2C9-301%2C9-336%2C9-223%2C9-692%2C9-688%2C9-280%2C9-297%2C9-232%2C9-118%2C9-217%2C9-337%2C9-219%2C9-218%2C9-281%2C9-235%2C9-212%2C9-317%2C9-323%2C9-234%2C9-228%2C9-318%2C9-319%2C9-289%2C9-221%2C9-112%2C9-233%2C9-222%2C9-714%2C9-220%2C9-290%2C9-690&rentalType=lejlighed"
+# Dit præcise link med Frederiksberg, Ø, N, V og K
+TEST_URL = "https://www.findbolig.nu/da-dk/find?Commune=Frederiksberg&Rent=0%2C45000&Rooms=0%2C10&Area=0%2C500&Floor=0%2C20&PropertyYear=1900%2C2026&City=K%C3%B8benhavn+%C3%98%2CK%C3%B8benhavn+N%2CK%C3%B8benhavn+V%2CK%C3%B8benhavn+K"
 
 def run_local_test():
-    print("Starter usynlig browser via Playwright...")
+    print("Starter netværks-lytter for Findbolig...")
+    boliger = []
+
     with sync_playwright() as p:
-        # Hvis du vil se browseren åbne rent fysisk på din skærm, kan du ændre headless=True til headless=False
         browser = p.chromium.launch(headless=True)
-        page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+        page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         
-        print("Venter på at siden og JavaScript er færdig med at loade (dette tager et par sekunder)...")
+        def handle_response(response):
+            if "api/search" in response.url.lower():
+                try:
+                    data = response.json()
+                    if "results" in data:
+                        boliger.extend(data["results"])
+                        print(f"--> 📡 Fangede usynlig datapakke med {len(data['results'])} boliger!")
+                except Exception:
+                    pass
+                    
+        page.on("response", handle_response)
+        
+        print("Åbner dit specifikke link og venter på deres database...")
         page.goto(TEST_URL, wait_until="networkidle", timeout=60000)
+        page.wait_for_timeout(3000)
         
-        html = page.content()
         browser.close()
+
+    print(f"\nFandt i alt {len(boliger)} boliger på første dataside.")
+    print("Filtrerer nu lokalt i Python (Postnr 1000-2200, Maks 25.000 kr, min 2 værelser)...\n")
+
+    fundne_boliger = 0
+    for b in boliger:
+        b_id = str(b.get("id", ""))
+        pris = b.get("rent", 999999)
+        vaer = b.get("rooms", 0)
+        vej = b.get("street", "Ukendt vej")
+        by = b.get("postalCodeName", "Ukendt by")
+        postnr = b.get("postalCode", 0)
         
-        print(f"✅ Siden er hentet! Læste {len(html)} tegn HTML.")
-        
-        # Prøver at finde links med præcis samme regex som i dit rigtige script
-        links = set(re.findall(r'href="(/bolig/[^"]+)"', html))
-        links.update(re.findall(r'href="(/lejebolig/[^"]+)"', html))
-        
-        print(f"🔗 Fandt {len(links)} bolig-links på siden.")
-        
-        if links:
-            print("\nEksempler på fundne boliger:")
-            for l in list(links)[:5]:
-                print(" -", l)
-        else:
-            print("\n❌ Fandt STADIG ingen links. Koden er defekt.")
+        # 1. Postnummer-sikkerhedsnet (blokerer Amager/Nordvest hvis URL'en fejler)
+        if not (1000 <= postnr <= 2200):
+            continue
+            
+        # 2. Filter (sat til 25.000 kr. i testen for at se resultater)
+        if pris <= 25000 and vaer >= 2:
+            fundne_boliger += 1
+            link = f"https://www.findbolig.nu/da-dk/bolig/{b_id}"
+            print(f"✅ GODKENDT: {vej}, {postnr} {by} | Pris: {pris} kr. | Vær: {vaer}")
+            print(f"   Link: {link}\n")
+            
+    if fundne_boliger == 0:
+        print("❌ Filteret sorterede alt fra.")
+    else:
+        print(f"🎉 Succes! Din Python-kode og postnummer-sikring fandt {fundne_boliger} matchende boliger.")
 
 if __name__ == "__main__":
     run_local_test()
