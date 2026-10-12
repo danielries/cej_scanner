@@ -136,9 +136,10 @@ def check_cej(state: dict, first_run: bool):
     print("--- Tjekker CEJ ---")
     seen = set(state.get("seen", []))
     try:
-        html = fetch_js(CEJ_URL)
+        # Vi bruger fetch() med indbygget ScrapingAnt-fallback mod 429-fejl
+        html = fetch(CEJ_URL)
         current = sorted(set(re.findall(r"/boliger/([0-9a-f]{32})", html)))
-        print(f"✅ CEJ fandt {len(current)} boliger på overblikket.")
+        print(f"✅ CEJ fandt {len(current)} boliger.")
         
         new = [i for i in current if i not in seen]
         
@@ -146,7 +147,7 @@ def check_cej(state: dict, first_run: bool):
             for listing_id in new:
                 link = f"{CEJ_BASE}/boliger/{listing_id}"
                 try:
-                    b_html = fetch_js(link).lower()
+                    b_html = fetch(link).lower() # Bruger også fetch med fallback her
                     
                     if "reserveret" in b_html or "udlejet" in b_html or "lukket" in b_html:
                         continue
