@@ -3,9 +3,53 @@
   "errors": 0,
   "last_check_day": "2026-10-12",
   "seen": [],
-  "seen_cityapt": [],
-  "seen_findbolig": [],
+  "seen_cityapt": [
+    "https://cityapartment.dk/da/cityapartments/gerbrandsvej-2-1-th/",
+    "https://cityapartment.dk/da/cityapartments/jaegersborg-alle-6-1-sal/",
+    "https://cityapartment.dk/da/cityapartments/nygaardsvej-3-4-tv/",
+    "https://cityapartment.dk/da/cityapartments/oesterbrogade-39-2-th/",
+    "https://cityapartment.dk/da/cityapartments/rigensgade-5-4-th/",
+    "https://cityapartment.dk/da/cityapartments/saxovej-75e-st-3/",
+    "https://cityapartment.dk/da/cityapartments/taasingegade-20-st-th-2/"
+  ],
+  "seen_findbolig": [
+    "https://www.findbolig.nu/property/1139",
+    "https://www.findbolig.nu/property/11394",
+    "https://www.findbolig.nu/property/1682",
+    "https://www.findbolig.nu/property/1688",
+    "https://www.findbolig.nu/property/2348",
+    "https://www.findbolig.nu/property/2349",
+    "https://www.findbolig.nu/property/2353",
+    "https://www.findbolig.nu/property/2361",
+    "https://www.findbolig.nu/property/2362",
+    "https://www.findbolig.nu/property/2366",
+    "https://www.findbolig.nu/property/327",
+    "https://www.findbolig.nu/property/382171",
+    "https://www.findbolig.nu/property/632",
+    "https://www.findbolig.nu/residence/291624",
+    "https://www.findbolig.nu/residence/291626",
+    "https://www.findbolig.nu/residence/291640"
+  ],
   "seen_heimstaden": [],
-  "seen_kereby": [],
-  "seen_propstep": []
+  "seen_kereby": [
+    "https://kereby.dk/bolig/gersonsvej-55-st-th-2900-hellerup/",
+    "https://kereby.dk/bolig/sortedam-dossering-45-5-tv-2200-kobenhavn-n/",
+    "https://kereby.dk/bolig/strandboulevarden-61-5-th-2100-kobenhavn/"
+  ],
+  "seen_propstep": [
+    "https://propstep.com/da-DK/bolig/66f06a1a35db520e6cd595cc-bygmestervej-53-st-th",
+    "https://propstep.com/da-DK/bolig/67f64fcabba3eb36eeb1c17f-oerestads-boulevard-40-d-6-doer2",
+    "https://propstep.com/da-DK/bolig/67f64fcbbba3eb36eeb1c1a4-oerestads-boulevard-40-d-10-doer2",
+    "https://propstep.com/da-DK/bolig/6864326d5072bd262ca9a70d-gertrude-steins-vej-6-st-tv",
+    "https://propstep.com/da-DK/bolig/6864326e5072bd262ca9a715-gertrude-steins-vej-6-4-th",
+    "https://propstep.com/da-DK/bolig/6864327236d031023c68c67e-gertrude-steins-vej-14-1-th",
+    "https://propstep.com/da-DK/bolig/6864327236d031023c68c681-gertrude-steins-vej-14-2-th",
+    "https://propstep.com/da-DK/bolig/68d3eb2ba8541d5070e85c98-yderlandsvej-28-st-3",
+    "https://propstep.com/da-DK/bolig/68d3eb2ba8541d5070e85cae-yderlandsvej-28-2-sal-4",
+    "https://propstep.com/da-DK/bolig/68d3eb2ba8541d5070e85cb6-yderlandsvej-28-3-sal-3",
+    "https://propstep.com/da-DK/bolig/68d3eb2ba8541d5070e85cc0-yderlandsvej-28-4-sal-3",
+    "https://propstep.com/da-DK/bolig/68edfc30bc56665b69b7cf33-theklavej-33-st-tv",
+    "https://propstep.com/da-DK/bolig/68edfc30bc56665b69b7cf3d-theklavej-35-2-1",
+    "https://propstep.com/da-DK/bolig/68edfc30bc56665b69b7cf55-theklavej-35-st-1"
+  ]
 }
