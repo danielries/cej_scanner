@@ -167,21 +167,29 @@ def check_kereby(state: dict, first_run: bool):
     
     try:
         html = fetch_js(KEREBY_URL)
-        links = set(re.findall(r'href="(/bolig/[^"]+)"', html))
-        current_links = [KEREBY_BASE + l if not l.startswith("http") else l for l in links]
-        new_links = [lnk for lnk in current_links if lnk not in seen]
+        
+        # Fanger nu links uanset om de starter med https://kereby.dk eller bare /bolig/
+        links_abs = set(re.findall(r'href="(https://kereby\.dk/bolig/[^"]+)"', html))
+        links_rel = set(re.findall(r'href="(/bolig/[^"]+)"', html))
+        
+        links = links_abs.union({KEREBY_BASE + l for l in links_rel})
+        new_links = [lnk for lnk in links if lnk not in seen]
 
         if not first_run and not is_kereby_first_run:
             for link in new_links:
-                # 1. Tjek postnummer via URL'en først (sparer API-kald på forkerte bydele)
+                # 1. Tjek postnummer via URL'en (Tillad 1000-2000, 2100, 2200)
                 postnr_match = re.search(r'-([1-2][0-9]{3})-(kobenhavn|frederiksberg)', link, re.I)
                 if postnr_match:
                     p = int(postnr_match.group(1))
                     if (1000 <= p <= 2000) or p == 2100 or p == 2200:
                         
-                        # 2. Åbn boligen for at tjekke pris og værelser
+                        # 2. Åbn boligen for at tjekke pris, værelser og status
                         try:
                             b_html = fetch(link)
+                            
+                            # Frasortér hvis den allerede er reserveret
+                            if "reserveret" in b_html.lower():
+                                continue
                             
                             # Find pris
                             pris_m = re.search(r'([0-9]{1,2}\.[0-9]{3})\s*kr', b_html, re.I)
@@ -191,12 +199,13 @@ def check_kereby(state: dict, first_run: bool):
                             vaer_m = re.search(r'([1-9])\s*Værels', b_html, re.I)
                             vaer_val = int(vaer_m.group(1)) if vaer_m else 0
 
+                            # Hård grænse på maks 15.000 kr.
                             if pris_val <= 50000 and vaer_val >= 2:
                                 notify("Ny bolig hos Kereby 🏠", f"{pris_val} kr. · {vaer_val} vær.", click=link)
                         except Exception as e:
                             print(f"Fejl ved Kereby bolig {link}: {e}")
                         
-        state["seen_kereby"] = sorted(seen | set(current_links))
+        state["seen_kereby"] = sorted(seen | links)
     except Exception as exc:
         print(f"Kunne ikke hente Kereby: {exc}")
 
