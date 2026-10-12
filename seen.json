@@ -37,7 +37,11 @@
     "https://www.findbolig.nu/da-dk/bolig/ef2cb539-0df0-4d79-ec20-08de857df8da"
   ],
   "seen_heimstaden": [],
-  "seen_kereby": [],
+  "seen_kereby": [
+    "https://kereby.dk/bolig/gersonsvej-55-st-th-2900-hellerup/",
+    "https://kereby.dk/bolig/sortedam-dossering-45-5-tv-2200-kobenhavn-n/",
+    "https://kereby.dk/bolig/strandboulevarden-61-5-th-2100-kobenhavn/"
+  ],
   "seen_propstep": [
     "https://propstep.com/da-DK/bolig/66f06a1a35db520e6cd595cc-bygmestervej-53-st-th",
     "https://propstep.com/da-DK/bolig/67f64fcabba3eb36eeb1c17f-oerestads-boulevard-40-d-6-doer2",
