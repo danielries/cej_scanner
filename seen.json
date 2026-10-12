@@ -2,7 +2,13 @@
   "empty_warned": "2026-10-10",
   "errors": 0,
   "last_check_day": "2026-10-12",
-  "seen": [],
+  "seen": [
+    "4d5e17c521104da08ec26928d8a71a84",
+    "95444552bbcd48698be16fb8387d1a47",
+    "ca6b633c0fa9497f8b0f826cac92197a",
+    "d18e09cd3ed14c3bd1e3c4d12ce60a97",
+    "ef09c4eafcbcdf7c90670dd9e676664b"
+  ],
   "seen_cityapt": [
     "https://cityapartment.dk/da/cityapartments/gerbrandsvej-2-1-th/",
     "https://cityapartment.dk/da/cityapartments/jaegersborg-alle-6-1-sal/",
