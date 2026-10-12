@@ -36,7 +36,7 @@ PROPSTEP_URL = (
 PROPSTEP_BASE = "https://propstep.com"
 
 # --- Indstillinger for City Apartment ---
-CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/?_sfm_pris=0+36100&_sfm_ikon_m2=0+300"
+CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/?_sfm_pris=0+15100&_sfm_ikon_m2=0+300"
 
 # --- Indstillinger for Findbolig ---
 FINDBOLIG_URL = (
