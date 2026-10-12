@@ -2,7 +2,7 @@ name: CEJ boligovervågning
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/5 7-22 * * *"
   workflow_dispatch: 
 
 permissions:
