@@ -200,7 +200,7 @@ def check_kereby(state: dict, first_run: bool):
                             vaer_val = int(vaer_m.group(1)) if vaer_m else 0
 
                             # Hård grænse på maks 15.000 kr.
-                            if pris_val <= 50000 and vaer_val >= 2:
+                            if pris_val <= 15000 and vaer_val >= 2:
                                 notify("Ny bolig hos Kereby 🏠", f"{pris_val} kr. · {vaer_val} vær.", click=link)
                         except Exception as e:
                             print(f"Fejl ved Kereby bolig {link}: {e}")
