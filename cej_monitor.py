@@ -36,7 +36,7 @@ PROPSTEP_URL = (
 PROPSTEP_BASE = "https://propstep.com"
 
 # --- Indstillinger for City Apartment ---
-CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/?_sfm_pris=0+15100&_sfm_ikon_m2=0+300"
+CITYAPARTMENT_URL = "https://cityapartment.dk/da/lejeboliger-koebenhavn/"
 
 # --- Indstillinger for Findbolig ---
 FINDBOLIG_URL = (
@@ -133,22 +133,23 @@ def save_state(state: dict) -> None:
         f.write("\n")
 
 def check_cej(state: dict, first_run: bool):
+    print("--- Tjekker CEJ ---")
     seen = set(state.get("seen", []))
     try:
-        html = fetch(CEJ_URL)
+        # Nu bruger vi Playwright (fetch_js) i stedet for urllib for at undgå HTTP 429
+        html = fetch_js(CEJ_URL)
         current = sorted(set(re.findall(r"/boliger/([0-9a-f]{32})", html)))
         new = [i for i in current if i not in seen]
+        
         if not first_run:
             for listing_id in new:
                 link = f"{CEJ_BASE}/boliger/{listing_id}"
                 try:
-                    b_html = fetch(link).lower()
+                    b_html = fetch_js(link).lower() # Vi bruger også Playwright her
                     
-                    # 1. Frasortér reserverede og lukkede boliger
                     if "reserveret" in b_html or "udlejet" in b_html or "lukket" in b_html:
                         continue
                         
-                    # 2. Hård blokering af Amager og uønskede postnumre
                     bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
                     if any(bz in b_html for bz in bad_zips):
                         continue
@@ -157,8 +158,8 @@ def check_cej(state: dict, first_run: bool):
                 except Exception:
                     pass
         state["seen"] = sorted(seen | set(current))
-    except:
-        pass
+    except Exception as exc:
+        print(f"Kunne ikke hente CEJ: {exc}")
 
 def check_kereby(state: dict, first_run: bool):
     print("--- Tjekker Kereby ---")
@@ -167,43 +168,34 @@ def check_kereby(state: dict, first_run: bool):
     
     try:
         html = fetch_js(KEREBY_URL)
-        
-        # Fanger nu links uanset om de starter med https://kereby.dk eller bare /bolig/
         links_abs = set(re.findall(r'href="(https://kereby\.dk/bolig/[^"]+)"', html))
         links_rel = set(re.findall(r'href="(/bolig/[^"]+)"', html))
-        
         links = links_abs.union({KEREBY_BASE + l for l in links_rel})
         new_links = [lnk for lnk in links if lnk not in seen]
 
         if not first_run and not is_kereby_first_run:
             for link in new_links:
-                # 1. Tjek postnummer via URL'en (Tillad 1000-2000, 2100, 2200)
-                postnr_match = re.search(r'-([1-2][0-9]{3})-(kobenhavn|frederiksberg)', link, re.I)
+                # OPPDATERET: Mere robust postnummer-tjek (kræver bare et postnr i URL'en)
+                postnr_match = re.search(r'-([1-2][0-9]{3})-', link)
                 if postnr_match:
                     p = int(postnr_match.group(1))
                     if (1000 <= p <= 2000) or p == 2100 or p == 2200:
-                        
-                        # 2. Åbn boligen for at tjekke pris, værelser og status
                         try:
                             b_html = fetch(link)
-                            
-                            # Frasortér hvis den allerede er reserveret
-                            if "reserveret" in b_html.lower():
+                            if "reserveret" in b_html.lower() or "udlejet" in b_html.lower():
                                 continue
                             
-                            # Find pris
-                            pris_m = re.search(r'([0-9]{1,2}\.[0-9]{3})\s*kr', b_html, re.I)
-                            pris_val = int(pris_m.group(1).replace('.', '')) if pris_m else 999999
+                            # OPDATERET: Fanger også priser uden punktum, f.eks. "15000 kr"
+                            pris_m = re.search(r'([0-9]{1,2}[.,]?[0-9]{3})\s*kr', b_html, re.I)
+                            pris_val = int(re.sub(r'[.,]', '', pris_m.group(1))) if pris_m else 999999
                             
-                            # Find værelser
                             vaer_m = re.search(r'([1-9])\s*Værels', b_html, re.I)
                             vaer_val = int(vaer_m.group(1)) if vaer_m else 0
 
-                            # Hård grænse på maks 15.000 kr.
                             if pris_val <= 15000 and vaer_val >= 2:
                                 notify("Ny bolig hos Kereby 🏠", f"{pris_val} kr. · {vaer_val} vær.", click=link)
                         except Exception as e:
-                            print(f"Fejl ved Kereby bolig {link}: {e}")
+                            pass
                         
         state["seen_kereby"] = sorted(seen | links)
     except Exception as exc:
@@ -223,10 +215,7 @@ def check_heimstaden(state: dict, first_run: bool):
 
         if not first_run and not is_heimstaden_first_run:
             for link in new_links:
-                # Træk postnummer ud af URL'en og tillad kun de rigtige
-                postnr_match = re.search(r'-([1-2][0-9]{3})-(koebenhavn|frederiksberg)', link, re.I)
-                
-                # Bloker Amager (2300), Nordvest (2400) osv. direkte
+                postnr_match = re.search(r'-([1-2][0-9]{3})-', link)
                 bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
                 if any(bz in link for bz in bad_zips):
                     continue
@@ -234,7 +223,22 @@ def check_heimstaden(state: dict, first_run: bool):
                 if postnr_match:
                     p = int(postnr_match.group(1))
                     if (1000 <= p <= 2000) or p == 2100 or p == 2200:
-                        notify("Ny bolig hos Heimstaden 🏠", "Tryk for at åbne", click=link)
+                        try:
+                            # OPDATERET: Vi åbner boligen for at sikre "reserveret" og bekræfte prisen manuelt
+                            b_html = fetch(link).lower()
+                            if "reserveret" in b_html or "udlejet" in b_html:
+                                continue
+                                
+                            pris_m = re.search(r'([0-9]{1,2}[.,][0-9]{3})', b_html)
+                            pris_val = int(re.sub(r'[.,]', '', pris_m.group(1))) if pris_m else 999999
+                            
+                            vaer_m = re.search(r'([1-9])\s*vær', b_html, re.I)
+                            vaer_val = int(vaer_m.group(1)) if vaer_m else 0
+                            
+                            if pris_val <= 15000 and vaer_val >= 2:
+                                notify("Ny bolig hos Heimstaden 🏠", f"{pris_val} kr. · {vaer_val} vær.", click=link)
+                        except Exception:
+                            pass
                 
         state["seen_heimstaden"] = sorted(seen | set(current_links))
     except Exception as exc:
@@ -243,7 +247,7 @@ def check_heimstaden(state: dict, first_run: bool):
 def check_propstep(state: dict, first_run: bool):
     print("--- Tjekker Propstep ---")
     seen = set(state.get("seen_propstep", []))
-    is_propstep_first_run = len(seen) == 0  # Forhindrer spam, når Propstep tilføjes første gang
+    is_propstep_first_run = len(seen) == 0
     
     try:
         html = fetch_js(PROPSTEP_URL)
@@ -257,28 +261,24 @@ def check_propstep(state: dict, first_run: bool):
                     b_html = fetch(link)
                     html_lower = b_html.lower()
                     
-                    # 1. Frasortér reserverede og udlejede boliger
                     if "reserveret" in html_lower or "udlejet" in html_lower:
                         continue
                         
-                    # 2. Hård blokering af uønskede postnumre/bydele (Amager, Nordvest, Sydhavn osv.)
                     bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
-                    if any(re.search(rf"\b{bz}\b", b_html) for bz in bad_zips):
+                    if any(re.search(rf"\b{bz}\b", html_lower) for bz in bad_zips):
                         continue
                         
-                    # 3. Find pris, værelser og m2
                     pris_m = re.search(r'([0-9]{1,2}[.,][0-9]{3})', b_html)
-                    pris = pris_m.group(1).replace(',', '.') if pris_m else "?"
+                    pris_val = int(re.sub(r'[.,]', '', pris_m.group(1))) if pris_m else 999999
                     
                     vaer_m = re.search(r'([1-9])\s*vær', b_html, re.I)
-                    vaer = vaer_m.group(1) if vaer_m else "?"
+                    vaer_val = int(vaer_m.group(1)) if vaer_m else 0
                     
-                    m2_m = re.search(r'([0-9]{2,3})\s*m', b_html, re.I)
-                    m2 = m2_m.group(1) if m2_m else "?"
-
-                    notify("Ny bolig hos Propstep 🏠", f"{pris} kr. · {vaer} vær. · {m2} m²", click=link)
+                    # OPDATERET: Nu tillader den kun boligen, HVIS prisen og værelserne passer
+                    if pris_val <= 15000 and vaer_val >= 2:
+                        notify("Ny bolig hos Propstep 🏠", f"{pris_val} kr. · {vaer_val} vær.", click=link)
                 except Exception as e:
-                    print(f"Fejl ved Propstep bolig {link}: {e}")
+                    pass
                     
         state["seen_propstep"] = sorted(seen | set(current_links))
     except Exception as exc:
@@ -290,11 +290,17 @@ def check_cityapartment(state: dict, first_run: bool):
     is_cityapt_first_run = len(seen) == 0
     
     try:
-        html = fetch_js(CITYAPARTMENT_URL)
-        links = set(re.findall(r'href="(https://cityapartment\.dk/da/[^"]+)"', html))
-        
-        # OPATERET FILTER: Vi leder efter "cityapartments" i stedet for "property"
-        links = {l for l in links if "cityapartments" in l and l != CITYAPARTMENT_URL}
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            # Rå browser uden custom context/user-agent for at omgå anti-bot
+            page = browser.new_page()
+            page.goto(CITYAPARTMENT_URL, timeout=60000)
+            page.wait_for_timeout(6000)
+            html = page.content()
+            browser.close()
+            
+        match_links = re.findall(r'href="(https://cityapartment\.dk/da/cityapartments/[^"]+)"', html)
+        links = set(match_links)
         
         new_links = [lnk for lnk in links if lnk not in seen]
 
@@ -302,26 +308,20 @@ def check_cityapartment(state: dict, first_run: bool):
             for link in new_links:
                 try:
                     b_html = fetch(link)
-                    
-                    # 1. Tjek postnummer (tillad kun K, V, Frb, Ø, N)
                     postnr_match = re.search(r'\b(1[0-9]{3}|2000|2100|2200)\b', b_html)
                     if not postnr_match:
                         continue
                         
-                    # 2. Find pris og værelser
                     pris_m = re.search(r'([0-9]{1,2}[.,][0-9]{3})\s*DKK', b_html, re.I)
                     pris_val = int(pris_m.group(1).replace('.', '').replace(',', '')) if pris_m else 999999
-                    pris_str = pris_m.group(1) if pris_m else "?"
                     
                     vaer_m = re.search(r'([1-9])\s*-?\s*vær', b_html, re.I)
-                    vaer_val = int(vaer_m.group(1)) if vaer_m else 0
-                    vaer_str = vaer_m.group(1) if vaer_m else "?"
+                    vaer_val = int(vaer_m.group(1)) if vaer_val else 0
 
-                    # 3. Filtrer benhårdt på dine krav
                     if pris_val <= 15000 and vaer_val >= 2:
-                        notify("Ny bolig hos City Apartment 🏠", f"{pris_str} kr. · {vaer_str} vær.", click=link)
+                        notify("Ny bolig hos City Apartment 🏠", f"{pris_val} kr. · {vaer_val} vær.", click=link)
                 except Exception as e:
-                    print(f"Fejl ved City Apt bolig {link}: {e}")
+                    pass
                     
         state["seen_cityapt"] = sorted(seen | links)
     except Exception as exc:
@@ -365,7 +365,13 @@ def check_findbolig(state: dict, first_run: bool):
             if not b_id:
                 continue
                 
-            link = f"{FINDBOLIG_BASE}/da-dk/bolig/{b_id}"
+            # Vi bruger enten den direkte 'uri' fra databasen, hvis den findes, ellers fallback
+            uri = b.get("uri", "")
+            if uri:
+                link = f"{FINDBOLIG_BASE}{uri}"
+            else:
+                link = f"{FINDBOLIG_BASE}/property/{b.get('shortId', b_id)}"
+
             current_links.append(link)
             
             if link not in seen:
