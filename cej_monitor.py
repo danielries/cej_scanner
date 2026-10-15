@@ -14,7 +14,7 @@ from playwright.sync_api import sync_playwright
 
 # --- Indstillinger for CEJ ---
 DEFAULT_CEJ_URL = (
-    "https://udlejning.cej.dk/find-bolig/overblik?collection=residences&minRooms=2&monthlyPrice=0-15000&p=k%C3%B8benhavn&types=apartment"
+    "https://udlejning.cej.dk/find-bolig/overblik?collection=residences&minRooms=2&monthlyPrice=0-15000&p=sj%C3%A6lland&types=apartment"
 )
 CEJ_URL = os.environ.get("CEJ_URL", DEFAULT_CEJ_URL)
 CEJ_BASE = "https://udlejning.cej.dk"
@@ -152,7 +152,7 @@ def check_cej(state: dict, first_run: bool):
                     if "reserveret" in b_html or "udlejet" in b_html or "lukket" in b_html:
                         continue
                         
-                    bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
+                    bad_zips = ["2700", "2720"]
                     if any(bz in b_html for bz in bad_zips):
                         continue
                         
@@ -181,7 +181,7 @@ def check_kereby(state: dict, first_run: bool):
                 postnr_match = re.search(r'-([1-2][0-9]{3})-', link)
                 if postnr_match:
                     p = int(postnr_match.group(1))
-                    if (1000 <= p <= 2000) or p == 2100 or p == 2200:
+                    if (1000 <= p <= 2000) or p in (2100, 2200, 2300, 2400, 2450, 2820, 2900, 2920):
                         try:
                             b_html = fetch(link)
                             if "reserveret" in b_html.lower() or "udlejet" in b_html.lower():
@@ -218,13 +218,13 @@ def check_heimstaden(state: dict, first_run: bool):
         if not first_run and not is_heimstaden_first_run:
             for link in new_links:
                 postnr_match = re.search(r'-([1-2][0-9]{3})-', link)
-                bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
+                bad_zips = ["2700", "2720"]
                 if any(bz in link for bz in bad_zips):
                     continue
                     
                 if postnr_match:
                     p = int(postnr_match.group(1))
-                    if (1000 <= p <= 2000) or p == 2100 or p == 2200:
+                    if (1000 <= p <= 2000) or p in (2100, 2200, 2300, 2400, 2450, 2820, 2900, 2920):
                         try:
                             # OPDATERET: Vi åbner boligen for at sikre "reserveret" og bekræfte prisen manuelt
                             b_html = fetch(link).lower()
@@ -266,7 +266,7 @@ def check_propstep(state: dict, first_run: bool):
                     if "reserveret" in html_lower or "udlejet" in html_lower:
                         continue
                         
-                    bad_zips = ["2300", "2400", "2450", "2500", "2700", "2720"]
+                    bad_zips = ["2700", "2720"]
                     if any(re.search(rf"\b{bz}\b", html_lower) for bz in bad_zips):
                         continue
                         
@@ -310,7 +310,7 @@ def check_cityapartment(state: dict, first_run: bool):
             for link in new_links:
                 try:
                     b_html = fetch(link)
-                    postnr_match = re.search(r'\b(1[0-9]{3}|2000|2100|2200)\b', b_html)
+                    postnr_match = re.search(r'\b(1[0-9]{3}|2000|2100|2200|2300|2400|2450|2820|2900|2920)\b', b_html)
                     if not postnr_match:
                         continue
                         
