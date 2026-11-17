@@ -92,7 +92,10 @@
     "https://www.findbolig.nu/residence/90889",
     "https://www.findbolig.nu/residence/91981"
   ],
-  "seen_heimstaden": [],
+  "seen_heimstaden": [
+    "https://www.heimstaden.dk/lejebolig/lyngbyvej-174-1-26-2100-koebenhavn-oe/",
+    "https://www.heimstaden.dk/lejebolig/lyngbyvej-174-st-23-2100-koebenhavn-oe/"
+  ],
   "seen_kereby": [
     "https://kereby.dk/bolig/aboulevard-48-1-th-2200-kobenhavn-n/",
     "https://kereby.dk/bolig/aboulevard-48-5-th-2200-kobenhavn-n/",
